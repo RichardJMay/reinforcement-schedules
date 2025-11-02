@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Reinforcement Schedules – Full Arrangements</title>
+<meta name="color-scheme" content="light dark" />
+<style>
+  :root{
+    --bg:#0b0c10; --panel:#111317; --muted:#7a7f87; --fg:#e9eef5; --accent:#3b82f6; --success:#22c55e; --border:rgba(255,255,255,.08);
+  }
+  html,body{height:100%;margin:0}
+  body{font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Noto Sans",sans-serif;background:var(--bg);color:var(--fg)}
+  .container{max-width:1100px;margin:24px auto;padding:0 16px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px}
+  .grid{display:grid;gap:16px}
+  .grid-2{grid-template-columns:1fr 1fr}
+  .grid-3{grid-template-columns:1fr 1fr 1fr}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+  label{display:block;font-weight:600;margin-bottom:6px;color:#cbd5e1}
+  input,select{appearance:none;background:#0f1216;color:var(--fg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font:inherit;min-width:0}
+  input[type="number"]{width:120px}
+  button{cursor:pointer;border-radius:12px;border:1px solid var(--border);background:#151923;color:#e6edf6;padding:10px 14px;font-weight:600}
+  button.primary{background:var(--accent);color:white;border:none}
+  .muted{color:var(--muted)}
+  .pill{padding:4px 8px;border:1px solid var(--border);border-radius:999px;font-size:12px;color:#cbd5e1}
+  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
+  hr{border:none;border-top:1px solid var(--border);margin:12px 0}
+
+  /* Participant overlay */
+  #participantShell[hidden]{display:none}
+  #participantShell{position:fixed;inset:0;background:#111;display:grid;place-items:center;z-index:9999}
+  .phone-stage{width:100vw;height:100vh;display:grid;place-items:center}
+  .phone-frame{background:#000;width:min(420px,100vw);height:min(860px,100vh);border-radius:28px;box-shadow:0 20px 60px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.06);overflow:hidden;position:relative;display:flex;flex-direction:column}
+  @media (max-width:480px){.phone-frame{width:100vw;height:100vh;border-radius:0;box-shadow:none;border:none}}
+  .phone-status{height:36px;display:flex;align-items:center;justify-content:center;position:relative;background:#000;color:#aaa;font:12px/1.2 system-ui}
+  .pillbar{width:120px;height:18px;background:#0a0a0a;border-radius:12px;border:1px solid #111}
+  .dot{position:absolute;left:12px;width:7px;height:7px;background:#1f9d55;border-radius:50%;box-shadow:0 0 8px rgba(31,157,85,.6)}
+  .phone-content{flex:1;display:grid;grid-template-rows:auto 1fr auto;gap:12px;padding:16px;color:#eee}
+  .hud{display:flex;justify-content:space-between;align-items:center;font-weight:600;color:#cbd5e1}
+  .hud .cue{padding:4px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.08)}
+  .big-button{font:700 22px/1.1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:22px;border-radius:16px;border:none;cursor:pointer;background:#1a73e8;color:white;box-shadow:0 10px 28px rgba(26,115,232,.35);touch-action:manipulation}
+  .big-button:active{transform:translateY(1px)}
+  .two-buttons{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .feedback{display:grid;place-items:center;font:600 18px/1.2 system-ui;min-height:44px}
+  .flash{animation:flash .25s}
+  @keyframes flash{0%{filter:brightness(1.25)}100%{filter:brightness(1)}}
+  body.participant{overflow:hidden;background:#111}
+</style>
+</head>
+<body>
+
+<div class="container" id="adminShell">
+  <div class="card grid">
+    <h1 style="margin:0">Reinforcement Schedules – Full Arrangements</h1>
+    <p class="muted" style="margin-top:-6px">Instructor configures below. Participant sees only a phone-style screen with the response button(s) and feedback.</p>
+
+    <div class="grid grid-3">
+      <div class="card">
+        <h3 style="margin-top:0">Arrangement</h3>
+        <div class="row">
+          <div>
+            <label for="arrangement">Type</label>
+            <select id="arrangement">
+              <option value="simple">Simple (FR/VR/FI/VI)</option>
+              <option value="progressive">Progressive (PR/PI)</option>
+              <option value="multiple">Multiple (2 components)</option>
+              <option value="concurrent">Concurrent (2 keys)</option>
+              <option value="lag">Lag n (IRT category)</option>
+            </select>
+          </div>
+        </div>
+        <hr>
+        <div id="simpleCfg">
+          <div class="row">
+            <div>
+              <label for="scheduleType">Schedule</label>
+              <select id="scheduleType">
+                <option value="FR">FR</option>
+                <option value="VR">VR</option>
+                <option value="FI">FI</option>
+                <option value="VI">VI</option>
+              </select>
+            </div>
+            <div>
+              <label for="paramValue">Value<span class="muted"> (ratio or sec)</span></label>
+              <input id="paramValue" type="number" min="1" step="1" value="8" />
+            </div>
+            <div>
+              <label for="paramVar">Var<span class="muted"> (± jitter)</span></label>
+              <input id="paramVar" type="number" min="0" step="1" value="3" />
+            </div>
+          </div>
+        </div>
+
+        <div id="progCfg" style="display:none">
+          <div class="row">
+            <div>
+              <label for="progBaseType">Base</label>
+              <select id="progBaseType">
+                <option value="PR">PR (ratio grows)</option>
+                <option value="PI">PI (interval grows)</option>
+              </select>
+            </div>
+            <div>
+              <label for="progStart">Start<span class="muted"> (ratio or sec)</span></label>
+              <input id="progStart" type="number" min="1" step="1" value="5" />
+            </div>
+            <div>
+              <label for="progStep">Step<span class="muted"> (+ each reinf)</span></label>
+              <input id="progStep" type="number" min="1" step="1" value="2" />
+            </div>
+            <div>
+              <label for="progJitter">Var<span class="muted"> (± jitter)</span></label>
+              <input id="progJitter" type="number" min="0" step="1" value="0" />
+            </div>
+          </div>
+        </div>
+
+        <div id="multCfg" style="display:none">
+          <p class="muted" style="margin:4px 0 8px">Two components (A/B) with discriminative cues. Auto-switch by time.</p>
+          <div class="row">
+            <div>
+              <label for="compSec">Component length (sec)</label>
+              <input id="compSec" type="number" min="2" step="1" value="30" />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label>Comp A</label>
+              <select id="mAType"><option>FR</option><option>VR</option><option>FI</option><option>VI</option></select>
+              <input id="mAVal" type="number" min="1" step="1" value="8" />
+              <input id="mAJit" type="number" min="0" step="1" value="0" />
+            </div>
+            <div>
+              <label>Comp B</label>
+              <select id="mBType"><option>FR</option><option>VR</option><option>FI</option><option>VI</option></select>
+              <input id="mBVal" type="number" min="1" step="1" value="20" />
+              <input id="mBJit" type="number" min="0" step="1" value="0" />
+            </div>
+          </div>
+        </div>
+
+        <div id="concCfg" style="display:none">
+          <p class="muted" style="margin:4px 0 8px">Two keys, each with its own schedule.</p>
+          <div class="row">
+            <div>
+              <label>Key L</label>
+              <select id="cLType"><option>FR</option><option>VR</option><option>FI</option><option>VI</option></select>
+              <input id="cLVal" type="number" min="1" step="1" value="10" />
+              <input id="cLJit" type="number" min="0" step="1" value="0" />
+            </div>
+            <div>
+              <label>Key R</label>
+              <select id="cRType"><option>FR</option><option>VR</option><option>FI</option><option>VI</option></select>
+              <input id="cRVal" type="number" min="1" step="1" value="30" />
+              <input id="cRJit" type="number" min="0" step="1" value="0" />
+            </div>
+          </div>
+        </div>
+
+        <div id="lagCfg" style="display:none">
+          <p class="muted" style="margin:4px 0 8px">Reinforce if current IRT category (short/long) differs from the response n back.</p>
+          <div class="row">
+            <div>
+              <label for="lagN">Lag n</label>
+              <input id="lagN" type="number" min="1" step="1" value="1" />
+            </div>
+            <div>
+              <label for="irtThr">IRT threshold (sec)</label>
+              <input id="irtThr" type="number" min="0.05" step="0.05" value="0.6" />
+            </div>
+          </div>
+        </div>
+
+        <hr>
+        <div class="row">
+          <div>
+            <label for="durationSec">Max Duration (sec)</label>
+            <input id="durationSec" type="number" min="0" step="1" value="0" />
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <label style="font-weight:600"><input id="soundOn" type="checkbox" checked> beep on reinforce</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Preview (in page)</h3>
+        <div class="row">
+          <button class="primary" id="startPreview">Start Preview</button>
+          <button id="stopPreview">Stop</button>
+          <span class="pill">Preview mirrors participant logic</span>
+        </div>
+        <div id="previewArea" style="margin-top:12px;display:none">
+          <div id="previewMount"></div>
+          <div class="row" style="margin-top:8px">
+            <span class="pill">Reinf: <span id="previewReinf" class="mono">0</span></span>
+            <span class="pill">Resp: <span id="previewResp" class="mono">0</span></span>
+            <span class="pill">Time: <span id="previewTime" class="mono">0.0s</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Participant Link</h3>
+        <p class="muted">Generates a URL that opens directly in Participant Mode with your settings.</p>
+        <div class="row">
+          <button id="generateLink" class="primary">Generate Participant Link</button>
+          <button id="copyLink">Copy</button>
+        </div>
+        <input id="shareUrl" type="text" readonly style="width:100%;margin-top:8px" />
+        <p class="muted" style="margin-top:8px">Opens like: <span class="mono">/index.html?participant=true&arr=concurrent&cL=VI,30,5&cR=VR,10,3</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PARTICIPANT MODE -->
+<section id="participantShell" hidden>
+  <div class="phone-stage">
+    <div class="phone-frame" id="phoneFrame">
+      <header class="phone-status"><div class="dot"></div><div class="pillbar"></div></header>
+      <main class="phone-content">
+        <div class="hud">
+          <div>Reinf: <span id="pmReinf" class="mono">0</span></div>
+          <div>Resp: <span id="pmResp" class="mono">0</span></div>
+          <div class="cue" id="pmCue">Ready</div>
+        </div>
+        <div id="pmMount"></div>
+        <div id="pmFeedback" class="feedback"></div>
+      </main>
+    </div>
+  </div>
+</section>
+
+<script>
+/* ==========================
+   Utilities / Tone
+========================== */
+const $ = (s)=>document.querySelector(s);
+const el = {
+  arrangement: $("#arrangement"),
+  // simple
+  type: $("#scheduleType"), value: $("#paramValue"), jitter: $("#paramVar"),
+  // progressive
+  pType: $("#progBaseType"), pStart: $("#progStart"), pStep: $("#progStep"), pJit: $("#progJitter"),
+  // multiple
+  compSec: $("#compSec"), mAType: $("#mAType"), mAVal: $("#mAVal"), mAJit: $("#mAJit"),
+  mBType: $("#mBType"), mBVal: $("#mBVal"), mBJit: $("#mBJit"),
+  // concurrent
+  cLType: $("#cLType"), cLVal: $("#cLVal"), cLJit: $("#cLJit"),
+  cRType: $("#cRType"), cRVal: $("#cRVal"), cRJit: $("#cRJit"),
+  // lag
+  lagN: $("#lagN"), irtThr: $("#irtThr"),
+
+  duration: $("#durationSec"), sound: $("#soundOn"),
+
+  // preview
+  startPrev: $("#startPreview"), stopPrev: $("#stopPreview"),
+  prevArea: $("#previewArea"), prevMount: $("#previewMount"),
+  prevReinf: $("#previewReinf"), prevResp: $("#previewResp"), prevTime: $("#previewTime"),
+
+  // link
+  genLink: $("#generateLink"), copyLink: $("#copyLink"), share: $("#shareUrl"),
+
+  // participant
+  overlay: $("#participantShell"), pmMount: $("#pmMount"),
+  pmReinf: $("#pmReinf"), pmResp: $("#pmResp"), pmCue: $("#pmCue"), pmFb: $("#pmFeedback"),
+};
+
+const tone = (() => {
+  let ctx;
+  return function beep(freq=880, dur=120){
+    try{
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain(); g.gain.value = 0.04;
+      o.type = "sine"; o.frequency.value = freq;
+      o.connect(g).connect(ctx.destination); o.start(); setTimeout(()=>o.stop(), dur);
+    }catch{}
+  };
+})();
+
+function enterFS(){
+  try{
+    const el = document.documentElement;
+    (el.requestFullscreen||el.webkitRequestFullscreen||(()=>{})).call(el);
+  }catch{}
+}
+
+/* ==========================
+   Core schedule primitives
+========================== */
+function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+function uInt(min,max){ min=Math.ceil(min); max=Math.floor(max); return Math.max(1, Math.floor(Math.random()*(max-min+1))+min); }
+function uFloat(min,max){ return Math.random()*(max-min)+min; }
+
+class BaseSchedule {
+  constructor({type="FR", value=5, jitter=0, sound=true}={}){
+    this.type = type;
+    this.value = Math.max(1, Number(value)||1);
+    this.jitter = Math.max(0, Number(jitter)||0);
+    this.sound = !!sound;
+    this.reset();
+  }
+  reset(){
+    this.responses = 0; this.reinf = 0; this.start = performance.now();
+    this.lastReinfT = this.start; this._since = 0; this.req = null; this.availAt = null;
+    this._prep(true);
+  }
+  now(){ return performance.now(); }
+  elapsed(){ return (this.now()-this.start)/1000; }
+  _sampleRatio(){ if(this.type==="FR") return this.value; const lo=clamp(this.value-this.jitter,1,1e9), hi=Math.max(lo,this.value+this.jitter); return uInt(lo,hi); }
+  _sampleInterval(){ if(this.type==="FI") return this.value; const lo=clamp(this.value-this.jitter,0.05,1e9), hi=Math.max(lo,this.value+this.jitter); return uFloat(lo,hi); }
+  _prep(initial=false){
+    if (this.type==="FR"||this.type==="VR"){ this.req=this._sampleRatio(); if(!initial) this.lastReinfT=this.now(); }
+    else { const base = initial?this.start:this.now(); this.availAt=base+this._sampleInterval()*1000; if(!initial) this.lastReinfT=base; }
+  }
+  respond(){
+    this.responses++;
+    if (this.type==="FR"||this.type==="VR"){
+      this._since++;
+      if (this._since>=this.req) return this._deliver();
+      return {reinforced:false, reason:"ratio not met"};
+    } else {
+      if (this.now()>=this.availAt) return this._deliver();
+      return {reinforced:false, reason:"interval not met"};
+    }
+  }
+  _deliver(){
+    this.reinf++; this._since=0;
+    if (this.sound) tone(900,140);
+    const isi=(this.now()-this.lastReinfT)/1000;
+    this._prep();
+    return {reinforced:true, isi};
+  }
+}
+
+/* Progressive wrapper */
+class Progressive {
+  constructor({baseType="PR", start=5, step=1, jitter=0, sound=true}={}){
+    this.mode = baseType; // "PR" or "PI"
+    this.value = Math.max(1, Number(start)||1);
+    this.step = Math.max(1, Number(step)||1);
+    this.jitter = Math.max(0, Number(jitter)||0);
+    this.sound = !!sound;
+    this._setupInner();
+  }
+  _setupInner(){
+    const type = (this.mode==="PR")? "FR" : "FI";
+    this.inner = new BaseSchedule({type, value:this.value, jitter:this.jitter, sound:this.sound});
+  }
+  reset(){ this.inner.reset(); }
+  elapsed(){ return this.inner.elapsed(); }
+  respond(){
+    const r = this.inner.respond();
+    if (r.reinforced){
+      this.value += this.step;
+      this._setupInner(); this.inner.lastReinfT = performance.now();
+    }
+    return r;
+  }
+  get responses(){ return this.inner.responses; }
+  get reinf(){ return this.inner.reinf; }
+}
+
+/* Multiple schedules (two components, time-based alternation) */
+class Multiple {
+  constructor({compSec=30, A, B, sound=true}){
+    this.compSec = Math.max(1, compSec|0);
+    this.A = new BaseSchedule({...A, sound});
+    this.B = new BaseSchedule({...B, sound});
+    this.active = "A"; this.start = performance.now(); this.switchAt = this.start + this.compSec*1000;
+  }
+  reset(){ this.A.reset(); this.B.reset(); this.active="A"; this.start=performance.now(); this.switchAt=this.start+this.compSec*1000; }
+  elapsed(){ return (performance.now()-this.start)/1000; }
+  current(){ return this.active==="A"?this.A:this.B; }
+  cue(){ return this.active==="A" ? "Comp A" : "Comp B"; }
+  respond(){
+    const now = performance.now();
+    if (now >= this.switchAt){ this.active = (this.active==="A")?"B":"A"; this.switchAt = now + this.compSec*1000; }
+    return this.current().respond();
+  }
+  get responses(){ return this.A.responses + this.B.responses; }
+  get reinf(){ return this.A.reinf + this.B.reinf; }
+}
+
+/* Concurrent schedules (two keys) */
+class Concurrent {
+  constructor({L, R, sound=true}){
+    this.L = new BaseSchedule({...L, sound});
+    this.R = new BaseSchedule({...R, sound});
+    this.start = performance.now();
+  }
+  reset(){ this.L.reset(); this.R.reset(); this.start = performance.now(); }
+  elapsed(){ return (performance.now()-this.start)/1000; }
+  respond(side){ return side==="L" ? this.L.respond() : this.R.respond(); }
+  get responses(){ return this.L.responses + this.R.responses; }
+  get reinf(){ return this.L.reinf + this.R.reinf; }
+}
+
+/* Lag n using IRT category (short/long) */
+class LagN {
+  constructor({n=1, irtThr=0.6, sound=true}){
+    this.n = Math.max(1, n|0); this.irtThr = Math.max(0.05, Number(irtThr)||0.6);
+    this.sound = !!sound; this.reset();
+  }
+  reset(){ this.start=performance.now(); this.lastT=this.start; this.responses=0; this.reinf=0; this.hist=[]; }
+  elapsed(){ return (performance.now()-this.start)/1000; }
+  respond(){
+    const now = performance.now();
+    const irt = (now - this.lastT)/1000; this.lastT = now;
+    this.responses++;
+    const cat = irt < this.irtThr ? "S" : "L"; // short vs long
+    let reinforce=false;
+    if (this.hist.length >= this.n){
+      const nBack = this.hist[this.hist.length - this.n];
+      if (cat !== nBack){ reinforce = true; }
+    }
+    this.hist.push(cat);
+    if (this.hist.length > this.n+5) this.hist.shift();
+
+    if (reinforce){
+      this.reinf++; if (this.sound) tone(900,140);
+      return {reinforced:true, isi:irt};
+    }
+    return {reinforced:false, reason:"matches n-back category"};
+  }
+}
+
+/* ==========================
+   UI builders for preview/participant
+========================== */
+function buildSingleButtonUI(mount, onPress){
+  mount.innerHTML = "";
+  const wrap = document.createElement("div");
+  wrap.style.display="grid"; wrap.style.placeItems="center";
+  const btn = document.createElement("button"); btn.className="big-button"; btn.textContent="Respond";
+  wrap.appendChild(btn); mount.appendChild(wrap);
+  btn.addEventListener("click", onPress);
+  return btn;
+}
+function buildTwoButtonUI(mount, onLeft, onRight){
+  mount.innerHTML = "";
+  const grid = document.createElement("div"); grid.className="two-buttons";
+  const L = document.createElement("button"); L.className="big-button"; L.textContent="Left";
+  const R = document.createElement("button"); R.className="big-button"; R.textContent="Right";
+  grid.appendChild(L); grid.appendChild(R); mount.appendChild(grid);
+  L.addEventListener("click", onLeft); R.addEventListener("click", onRight);
+  return {L,R};
+}
+
+/* ==========================
+   Preview wiring
+========================== */
+let prevTimer=null, prevEngine=null, prevBtns=null;
+function showPreviewCounters(){
+  el.prevTime.textContent = (prevEngine?.elapsed()?.toFixed(1) || "0.0")+"s";
+}
+function startPreview(){
+  stopPreview();
+  el.prevArea.style.display="block";
+  const cfg = collectConfig();
+  const mount = el.prevMount;
+  const fb = document.createElement("div"); fb.className="feedback"; mount.after(fb);
+
+  function updateCounts(reinf, resp){ el.prevReinf.textContent=String(reinf); el.prevResp.textContent=String(resp); }
+
+  if (cfg.arrangement==="concurrent"){
+    prevEngine = new Concurrent(cfg.concurrent);
+    prevBtns = buildTwoButtonUI(mount,
+      ()=>{ const r=prevEngine.respond("L"); updateCounts(prevEngine.reinf, prevEngine.responses); flash(r, fb); },
+      ()=>{ const r=prevEngine.respond("R"); updateCounts(prevEngine.reinf, prevEngine.responses); flash(r, fb); }
+    );
+  } else {
+    prevEngine = makeEngineFromConfig(cfg);
+    buildSingleButtonUI(mount, ()=>{ const r=prevEngine.respond(); updateCounts(prevEngine.reinf, prevEngine.responses); flash(r, fb); });
+  }
+
+  prevTimer=setInterval(showPreviewCounters,100);
+}
+function stopPreview(){
+  if (prevTimer) clearInterval(prevTimer);
+  prevTimer=null; prevEngine=null; el.prevArea.style.display="none"; el.prevMount.innerHTML="";
+  el.prevReinf.textContent="0"; el.prevResp.textContent="0"; el.prevTime.textContent="0.0s";
+}
+function flash(r, fbEl){
+  if (!r) return;
+  if (r.reinforced){ fbEl.textContent="✓"; fbEl.style.color="var(--success)"; fbEl.classList.add("flash"); setTimeout(()=>fbEl.classList.remove("flash"),200);}
+  else { fbEl.textContent=""; }
+}
+
+/* ==========================
+   Participant wiring
+========================== */
+let pmTimer=null, pmEngine=null;
+function startParticipant(params){
+  // hide admin, show overlay
+  document.getElementById("adminShell").style.display="none";
+  el.overlay.hidden=false; document.body.classList.add("participant");
+  enterFS();
+
+  const cueEl = el.pmCue, fbEl = el.pmFb, m = el.pmMount;
+  function updateHUD(){ el.pmReinf.textContent=String(pmEngine?.reinf||0); el.pmResp.textContent=String(pmEngine?.responses||0); }
+
+  if (params.arrangement==="concurrent"){
+    pmEngine = new Concurrent(params.concurrent);
+    const b = buildTwoButtonUI(m,
+      ()=>{ const r=pmEngine.respond("L"); updateHUD(); flash(r, fbEl); },
+      ()=>{ const r=pmEngine.respond("R"); updateHUD(); flash(r, fbEl); }
+    );
+    cueEl.textContent = "Concurrent";
+  } else if (params.arrangement==="multiple"){
+    pmEngine = new Multiple(params.multiple);
+    buildSingleButtonUI(m, ()=>{ const r=pmEngine.respond(); updateHUD(); cueEl.textContent = pmEngine.cue(); flash(r, fbEl); });
+    cueEl.textContent = pmEngine.cue();
+  } else if (params.arrangement==="progressive"){
+    pmEngine = new Progressive(params.progressive);
+    buildSingleButtonUI(m, ()=>{ const r=pmEngine.respond(); updateHUD(); flash(r, fbEl); });
+    cueEl.textContent = params.progressive.mode;
+  } else if (params.arrangement==="lag"){
+    pmEngine = new LagN(params.lag);
+    buildSingleButtonUI(m, ()=>{ const r=pmEngine.respond(); updateHUD(); flash(r, fbEl); });
+    cueEl.textContent = `Lag ${params.lag.n}`;
+  } else {
+    pmEngine = makeEngineFromConfig(params);
+    buildSingleButtonUI(m, ()=>{ const r=pmEngine.respond(); updateHUD(); flash(r, fbEl); });
+    cueEl.textContent = params.simple.type;
+  }
+
+  if (params.duration>0) setTimeout(()=>location.href=location.origin+location.pathname, params.duration*1000);
+  pmTimer=setInterval(()=>{}, 250);
+}
+
+/* ==========================
+   Config helpers
+========================== */
+function makeEngineFromConfig(cfg){
+  if (cfg.arrangement==="simple"){
+    return new BaseSchedule({type:cfg.simple.type, value:cfg.simple.value, jitter:cfg.simple.jitter, sound:cfg.sound});
+  }
+  return null;
+}
+
+function collectConfig(){
+  const arr = el.arrangement.value;
+  const sound = el.sound.checked;
+  const duration = Number(el.duration.value)||0;
+
+  if (arr==="simple"){
+    return {
+      arrangement:"simple", sound, duration,
+      simple:{ type:el.type.value, value:Number(el.value.value), jitter:Number(el.jitter.value) }
+    };
+  }
+  if (arr==="progressive"){
+    return {
+      arrangement:"progressive", sound, duration,
+      progressive:{ mode:el.pType.value, start:Number(el.pStart.value), step:Number(el.pStep.value), jitter:Number(el.pJit.value) }
+    };
+  }
+  if (arr==="multiple"){
+    return {
+      arrangement:"multiple", sound, duration,
+      multiple:{
+        compSec:Number(el.compSec.value),
+        A:{ type:el.mAType.value, value:Number(el.mAVal.value), jitter:Number(el.mAJit.value) },
+        B:{ type:el.mBType.value, value:Number(el.mBVal.value), jitter:Number(el.mBJit.value) }
+      }
+    };
+  }
+  if (arr==="concurrent"){
+    return {
+      arrangement:"concurrent", sound, duration,
+      concurrent:{
+        L:{ type:el.cLType.value, value:Number(el.cLVal.value), jitter:Number(el.cLJit.value) },
+        R:{ type:el.cRType.value, value:Number(el.cRVal.value), jitter:Number(el.cRJit.value) }
+      }
+    };
+  }
+  if (arr==="lag"){
+    return {
+      arrangement:"lag", sound, duration,
+      lag:{ n:Number(el.lagN.value), irtThr:Number(el.irtThr.value) }
+    };
+  }
+}
+
+function cfgToURL(cfg){
+  const base = `${location.origin}${location.pathname}`;
+  const p = new URLSearchParams();
+  p.set("participant","true"); p.set("arr", cfg.arrangement);
+  p.set("dur", String(cfg.duration||0)); if (!cfg.sound) p.set("mute","1");
+
+  if (cfg.arrangement==="simple"){
+    const s = cfg.simple; p.set("s", `${s.type},${s.value},${s.jitter}`);
+  } else if (cfg.arrangement==="progressive"){
+    const x = cfg.progressive; p.set("prog", `${x.mode},${x.start},${x.step},${x.jitter}`);
+  } else if (cfg.arrangement==="multiple"){
+    const m = cfg.multiple;
+    p.set("comp", String(m.compSec));
+    p.set("mA", `${m.A.type},${m.A.value},${m.A.jitter}`);
+    p.set("mB", `${m.B.type},${m.B.value},${m.B.jitter}`);
+  } else if (cfg.arrangement==="concurrent"){
+    const c = cfg.concurrent;
+    p.set("cL", `${c.L.type},${c.L.value},${c.L.jitter}`);
+    p.set("cR", `${c.R.type},${c.R.value},${c.R.jitter}`);
+  } else if (cfg.arrangement==="lag"){
+    const l = cfg.lag; p.set("lag", `${l.n},${l.irtThr}`);
+  }
+  return `${base}?${p.toString()}`;
+}
+
+function urlToParams(){
+  const p = new URLSearchParams(location.search);
+  if (p.get("participant")!=="true") return null;
+  const arr = p.get("arr")||"simple";
+  const sound = p.get("mute")==="1"?false:true;
+  const duration = Number(p.get("dur")||0);
+
+  function parseTriplet(s, defType){ const [t="FR",v="5",j="0"]=(s||"").split(","); return {type:(t||defType||"FR").toUpperCase(), value:Number(v)||5, jitter:Number(j)||0}; }
+
+  if (arr==="simple"){
+    const s = parseTriplet(p.get("s"), "FR");
+    return { arrangement:"simple", sound, duration, simple:s };
+  }
+  if (arr==="progressive"){
+    const [mode="PR",start="5",step="2",jit="0"]=(p.get("prog")||"PR,5,2,0").split(",");
+    return { arrangement:"progressive", sound, duration,
+      progressive:{ mode:mode.toUpperCase(), start:Number(start)||5, step:Number(step)||1, jitter:Number(jit)||0 }
+    };
+  }
+  if (arr==="multiple"){
+    const comp = Number(p.get("comp")||30);
+    const A = parseTriplet(p.get("mA"), "FR");
+    const B = parseTriplet(p.get("mB"), "VI");
+    return { arrangement:"multiple", sound, duration, multiple:{ compSec:comp, A, B } };
+  }
+  if (arr==="concurrent"){
+    const L = parseTriplet(p.get("cL"), "VI");
+    const R = parseTriplet(p.get("cR"), "VR");
+    return { arrangement:"concurrent", sound, duration, concurrent:{ L, R } };
+  }
+  if (arr==="lag"){
+    const [n="1",thr="0.6"]=(p.get("lag")||"1,0.6").split(",");
+    return { arrangement:"lag", sound, duration, lag:{ n:Number(n)||1, irtThr:Number(thr)||0.6 } };
+  }
+  return null;
+}
+
+/* ==========================
+   Events
+========================== */
+el.arrangement.addEventListener("change", ()=>{
+  const v = el.arrangement.value;
+  document.getElementById("simpleCfg").style.display = v==="simple"?"block":"none";
+  document.getElementById("progCfg").style.display   = v==="progressive"?"block":"none";
+  document.getElementById("multCfg").style.display   = v==="multiple"?"block":"none";
+  document.getElementById("concCfg").style.display   = v==="concurrent"?"block":"none";
+  document.getElementById("lagCfg").style.display    = v==="lag"?"block":"none";
+});
+
+document.getElementById("startPreview").addEventListener("click", startPreview);
+document.getElementById("stopPreview").addEventListener("click", stopPreview);
+
+document.getElementById("generateLink").addEventListener("click", ()=>{
+  const cfg = collectConfig(); el.share.value = cfgToURL(cfg);
+});
+document.getElementById("copyLink").addEventListener("click", async ()=>{
+  try{ await navigator.clipboard.writeText(el.share.value); document.getElementById("copyLink").textContent="Copied!"; setTimeout(()=>document.getElementById("copyLink").textContent="Copy",900);}catch{}
+});
+
+/* ==========================
+   Boot
+========================== */
+window.addEventListener("DOMContentLoaded", ()=>{
+  const auto = urlToParams();
+  if (auto){
+    // participant mode
+    startParticipant(auto);
+  }
+});
+</script>
+</body>
+</html>
