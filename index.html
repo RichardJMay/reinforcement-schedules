@@ -701,37 +701,40 @@
                 
                 <div id="config-chained" class="controls" style="display:none;">
                     <div class="control-group">
-                        <label>Funnel Steps</label>
+                        <label>Number of Chain Links</label>
                         <input type="number" id="chain-links" value="3" min="2" max="5">
-                        <div class="help-text">View → Like → Comment → Share</div>
+                        <div class="help-text">Complete FR5 → FR10 → FR15 to get reward</div>
                     </div>
                     <div class="control-group">
-                        <label>Actions per Step</label>
+                        <label>Responses per Link</label>
                         <input type="number" id="chain-responses" value="5" min="1">
+                        <div class="help-text">Must complete each link sequentially</div>
                     </div>
                 </div>
                 
                 <div id="config-conjunctive" class="controls" style="display:none;">
                     <div class="control-group">
-                        <label>Required Interactions</label>
+                        <label>Required Checks</label>
                         <input type="number" id="conj-responses" value="10" min="1">
+                        <div class="help-text">Must check at least this many times</div>
                     </div>
                     <div class="control-group">
-                        <label>Required Time (sec)</label>
+                        <label>AND Required Time (sec)</label>
                         <input type="number" id="conj-time" value="30" min="1">
+                        <div class="help-text">Must ALSO wait this long - BOTH required</div>
                     </div>
                 </div>
                 
                 <div id="config-alternative" class="controls" style="display:none;">
                     <div class="control-group">
-                        <label>Quick Checks</label>
+                        <label>Quick Checks Option</label>
                         <input type="number" id="alt-responses" value="10" min="1">
-                        <div class="help-text">Many fast checks</div>
+                        <div class="help-text">Check this many times quickly</div>
                     </div>
                     <div class="control-group">
-                        <label>OR Deep Scroll (sec)</label>
+                        <label>OR Wait Time Option (sec)</label>
                         <input type="number" id="alt-time" value="30" min="1">
-                        <div class="help-text">One long session</div>
+                        <div class="help-text">OR wait this long - EITHER gets reward</div>
                     </div>
                 </div>
                 
@@ -751,6 +754,10 @@
                 <div class="simulation-area">
                     <div class="session-controls">
                         <button class="btn-session btn-start" id="compound-start-btn">▶ Start Session</button>
+                    </div>
+                    
+                    <div class="phase-indicator" id="phase-indicator" style="display:none;">
+                        🔗 Chain Progress: Link <span id="current-phase">1</span> of <span id="total-phases">3</span>
                     </div>
                     
                     <div class="phone-mockup">
@@ -917,6 +924,10 @@
                 this.compoundPauseBtn = document.getElementById('compound-pause');
                 this.compoundResetBtn = document.getElementById('compound-reset');
                 
+                this.phaseIndicator = document.getElementById('phase-indicator');
+                this.currentPhaseEl = document.getElementById('current-phase');
+                this.totalPhasesEl = document.getElementById('total-phases');
+                
                 this.leftResponsesEl = document.getElementById('left-responses');
                 this.rightResponsesEl = document.getElementById('right-responses');
                 this.compoundReinforcementsEl = document.getElementById('compound-reinforcements');
@@ -1055,8 +1066,33 @@
                     if (el) el.style.display = t === type ? 'grid' : 'none';
                 });
                 
+                const container = document.getElementById('compound-buttons-container');
+                
+                // Show phase indicator for chained schedules
+                const phaseIndicator = document.getElementById('phase-indicator');
+                if (phaseIndicator) {
+                    phaseIndicator.style.display = type === 'chained' ? 'block' : 'none';
+                }
+                
                 if (type === 'lag') {
                     this.createLagButtons();
+                } else if (type === 'conjunctive' || type === 'alternative' || type === 'chained') {
+                    // Single button for these schedules
+                    container.innerHTML = '<button class="check-phone-btn" id="single-btn" disabled>Check Phone</button>';
+                    const singleBtn = document.getElementById('single-btn');
+                    singleBtn.addEventListener('click', () => this.handleCompoundResponse('single'));
+                    this.leftBtn = singleBtn;
+                    this.rightBtn = singleBtn;
+                } else {
+                    // Two buttons for concurrent and multiple
+                    container.innerHTML = `
+                        <button class="check-phone-btn" id="left-btn" disabled style="margin: 10px;">Check Instagram</button>
+                        <button class="check-phone-btn" id="right-btn" disabled style="margin: 10px;">Check Twitter</button>
+                    `;
+                    this.leftBtn = document.getElementById('left-btn');
+                    this.rightBtn = document.getElementById('right-btn');
+                    this.leftBtn.addEventListener('click', () => this.handleCompoundResponse('left'));
+                    this.rightBtn.addEventListener('click', () => this.handleCompoundResponse('right'));
                 }
             }
             
@@ -1239,24 +1275,38 @@
                     if (button !== activeButton) return; // Wrong button for current schedule
                 }
                 
-                if (button === 'left') {
-                    this.leftResponses++;
-                    this.leftResponsesEl.textContent = this.leftResponses;
-                } else if (button === 'right') {
-                    this.rightResponses++;
-                    this.rightResponsesEl.textContent = this.rightResponses;
+                const type = this.compoundType.value;
+                
+                // Track responses based on schedule type
+                if (type === 'concurrent' || type === 'multiple') {
+                    if (button === 'left') {
+                        this.leftResponses++;
+                        this.leftResponsesEl.textContent = this.leftResponses;
+                    } else if (button === 'right') {
+                        this.rightResponses++;
+                        this.rightResponsesEl.textContent = this.rightResponses;
+                    }
+                    this.responses = this.leftResponses + this.rightResponses;
+                } else {
+                    // Single button schedules
+                    this.responses++;
+                    this.leftResponsesEl.textContent = this.responses;
                 }
                 
-                this.responses = this.leftResponses + this.rightResponses;
                 this.responsesSinceReinf++;
                 
                 let reinforced = false;
-                const type = this.compoundType.value;
                 
                 if (type === 'concurrent') {
                     reinforced = this.checkConcurrent(button);
                 } else if (type === 'multiple') {
                     reinforced = this.checkMultiple();
+                } else if (type === 'chained') {
+                    reinforced = this.checkChained();
+                } else if (type === 'conjunctive') {
+                    reinforced = this.checkConjunctive();
+                } else if (type === 'alternative') {
+                    reinforced = this.checkAlternative();
                 } else if (type === 'lag') {
                     reinforced = this.checkLag(button);
                 }
@@ -1345,6 +1395,64 @@
                     this.rightBtn.style.opacity = '1';
                     this.rightBtn.style.transform = 'scale(1)';
                 }
+            }
+            
+            checkChained() {
+                const numLinks = parseInt(document.getElementById('chain-links').value);
+                const responsesPerLink = parseInt(document.getElementById('chain-responses').value);
+                
+                if (this.responsesSinceReinf >= responsesPerLink) {
+                    this.currentPhase++;
+                    this.responsesSinceReinf = 0;
+                    
+                    this.currentPhaseEl.textContent = this.currentPhase + 1;
+                    this.totalPhasesEl.textContent = numLinks;
+                    
+                    if (this.currentPhase >= numLinks) {
+                        // Completed all links - deliver reinforcement
+                        this.reinforcements++;
+                        this.compoundReinforcementsEl.textContent = this.reinforcements;
+                        this.currentPhase = 0;
+                        this.currentPhaseEl.textContent = '1';
+                        return true;
+                    } else {
+                        // Completed one link, moving to next
+                        this.compoundFeedContent.innerHTML = `<div class="no-notifications">✓ Link ${this.currentPhase} complete! Continue to next...</div>`;
+                    }
+                }
+                return false;
+            }
+            
+            checkConjunctive() {
+                const reqResp = parseInt(document.getElementById('conj-responses').value);
+                const reqTime = parseInt(document.getElementById('conj-time').value) * 1000;
+                const timeSinceStart = Date.now() - this.lastReinfTime;
+                
+                // BOTH requirements must be met
+                if (this.responsesSinceReinf >= reqResp && timeSinceStart >= reqTime) {
+                    this.reinforcements++;
+                    this.compoundReinforcementsEl.textContent = this.reinforcements;
+                    this.responsesSinceReinf = 0;
+                    this.lastReinfTime = Date.now();
+                    return true;
+                }
+                return false;
+            }
+            
+            checkAlternative() {
+                const reqResp = parseInt(document.getElementById('alt-responses').value);
+                const reqTime = parseInt(document.getElementById('alt-time').value) * 1000;
+                const timeSinceStart = Date.now() - this.lastReinfTime;
+                
+                // EITHER requirement can trigger reinforcement
+                if (this.responsesSinceReinf >= reqResp || timeSinceStart >= reqTime) {
+                    this.reinforcements++;
+                    this.compoundReinforcementsEl.textContent = this.reinforcements;
+                    this.responsesSinceReinf = 0;
+                    this.lastReinfTime = Date.now();
+                    return true;
+                }
+                return false;
             }
             
             checkLag(button) {
@@ -1442,10 +1550,48 @@
                 const scaleX = 700 / Math.max(maxT, 10);
                 
                 if (this.mode === 'compound') {
-                    const maxLeft = Math.max(...this.cumulativeData.map(d => d.leftY || 0));
-                    const maxRight = Math.max(...this.cumulativeData.map(d => d.rightY || 0));
-                    const maxY = Math.max(maxLeft, maxRight, 10);
-                    const scaleY = 300 / maxY;
+                    const type = this.compoundType.value;
+                    
+                    if (type === 'lag') {
+                        // For lag schedule, show single line with color-coded response types
+                        const maxR = Math.max(...this.cumulativeData.map(d => d.y));
+                        const scaleY = 300 / Math.max(maxR, 10);
+                        
+                        const colors = ['#667eea', '#764ba2', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#e83e8c', '#6f42c1'];
+                        
+                        for (let i = 1; i < this.cumulativeData.length; i++) {
+                            const x = 50 + this.cumulativeData[i].x * scaleX;
+                            const y = 350 - this.cumulativeData[i].y * scaleY;
+                            const prevX = 50 + this.cumulativeData[i-1].x * scaleX;
+                            const prevY = 350 - this.cumulativeData[i-1].y * scaleY;
+                            
+                            // Determine color based on button pressed
+                            let colorIndex = 0;
+                            if (this.cumulativeData[i].button) {
+                                const match = this.cumulativeData[i].button.match(/opt(\d+)/);
+                                if (match) colorIndex = parseInt(match[1]);
+                            }
+                            
+                            this.ctx.strokeStyle = colors[colorIndex % colors.length];
+                            this.ctx.lineWidth = 3;
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(prevX, prevY);
+                            this.ctx.lineTo(x, prevY);
+                            this.ctx.lineTo(x, y);
+                            this.ctx.stroke();
+                            
+                            if (this.cumulativeData[i].reinf) {
+                                this.ctx.fillStyle = '#28a745';
+                                this.ctx.fillRect(x-4, y-12, 8, 12);
+                            }
+                        }
+                        
+                    } else {
+                        // For other compound schedules, show separate left/right lines
+                        const maxLeft = Math.max(...this.cumulativeData.map(d => d.leftY || 0));
+                        const maxRight = Math.max(...this.cumulativeData.map(d => d.rightY || 0));
+                        const maxY = Math.max(maxLeft, maxRight, 10);
+                        const scaleY = 300 / maxY;
                     
                     this.ctx.fillStyle = '#667eea';
                     this.ctx.fillRect(650, 70, 25, 4);
@@ -1508,6 +1654,18 @@
                         }
                     }
                     this.ctx.stroke();
+                    
+                    // Draw reinforcement marks for schedules where button doesn't matter
+                    for (let i = 0; i < this.cumulativeData.length; i++) {
+                        if (this.cumulativeData[i].reinf && !this.cumulativeData[i].button) {
+                            const x = 50 + this.cumulativeData[i].x * scaleX;
+                            const yLeft = 350 - (this.cumulativeData[i].leftY || 0) * scaleY;
+                            const yRight = 350 - (this.cumulativeData[i].rightY || 0) * scaleY;
+                            this.ctx.fillStyle = '#28a745';
+                            this.ctx.fillRect(x - 3, Math.min(yLeft, yRight) - 10, 6, 10);
+                        }
+                    }
+                    }
                     
                 } else {
                     const maxR = Math.max(...this.cumulativeData.map(d => d.y));
